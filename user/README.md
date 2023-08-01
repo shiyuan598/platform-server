@@ -33,7 +33,10 @@ npx knex migrate:latest
 ```
 npx knex migrate:rollback
 ```
-
+命令已经放入到scripts中：
+npm run knex:make -- migration_name
+npm run knex:migrate
+npm run knex:rollback
 
 ### 文档
 mysql2:
