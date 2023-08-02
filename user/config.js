@@ -8,6 +8,10 @@ const development = {
         password: "123456",
         database: "user"
     },
+    REDIS: {
+        host: "127.0.0.1",
+        port: 6378,
+    },
     SECRET_KEY: "vimaklmf22@#"
 };
 // 生产环境配置
@@ -19,6 +23,10 @@ const production = {
         user: "root",
         password: "123456",
         database: "user"
+    },
+    REDIS: {
+        host: "127.0.0.1",
+        port: 6378,
     },
     SECRET_KEY: "vimaklmf22@#"
 };

@@ -2,7 +2,7 @@
 
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
-const { SECRET_KEY } = require("../config");
+const { SECRET_KEY } = require("../../config");
 
 let TOKEN = null;
 
