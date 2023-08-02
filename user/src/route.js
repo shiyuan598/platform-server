@@ -15,6 +15,24 @@ const generateToken = (user) => {
     }
 };
 
+const verifyToken = (request, response, next) => {
+    const token = request.headers.authorization;
+    console.info("token", token);
+
+    if (!token) {
+        return response.status(401).json({ message: "Unauthorized" });
+    }
+
+    jwt.verify(token, SECRET_KEY, (err, decoded) => {
+        if (err) {
+            return response.status(401).json({ message: "Invalid token" });
+        }
+
+        request.user = decoded;
+        next();
+    });
+};
+
 // 响应处理
 const fullFilled = (response, data, pagination, code = 0) => {
     response.json({
@@ -55,6 +73,11 @@ router.post("/login", async (request, response) => {
         console.info("error in login:", error);
         errorHandler(response, error);
     }
+});
+
+// 访问受保护的路由
+router.post("/protected", verifyToken, (request, response) => {
+    response.json({ msg: "haha" });
 });
 
 module.exports = router;
