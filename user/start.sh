@@ -6,7 +6,7 @@ export NODE_ENV=production
 npx knex migrate:latest
 
 # 启动应用程序
-nohup node weread.js &
+nohup node index.js &
 
 # 生成pid文件
 echo $! > pid.txt

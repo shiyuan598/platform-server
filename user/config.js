@@ -12,12 +12,12 @@ const development = {
 };
 // 生产环境配置
 const production = {
-    PORT: 9040,
+    PORT: 9044,
     DATABASE: {
         host: "localhost",
         port: 3307,
         user: "root",
-        password: "987654",
+        password: "123456",
         database: "user"
     },
     SECRET_KEY: "vimaklmf22@#"

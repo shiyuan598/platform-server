@@ -8,7 +8,7 @@ if ps -p $pid > /dev/null; then
     echo "Restarting the process with PID $pid"
     kill $pid
     sleep 1
-    nohup node weread.js &
+    nohup node index.js &
     echo $! > pid.txt
 else
     echo "Process with PID $pid not found."

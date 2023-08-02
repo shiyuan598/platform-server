@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon",
     "start": "node app.js",
-    "build": "ncc build app.js -m -o dist",
+    "build": "ncc build app.js -m -o dist && npm run copy:files",
+    "copy:files": "cp -r migrations dist && cp start.sh dist && cp stop.sh dist && cp restart.sh dist",
     "knex:make": "npx knex migrate:make",
     "knex:migrate": "npx knex migrate:latest",
     "knex:rollback": "npx knex migrate:rollback",
