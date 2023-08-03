@@ -30,17 +30,26 @@ async function login() {
     }
 }
 
-const visitProtected = () => {
+
+const visitGetUser = (id) => {
     axios
-        .post(
-            "http://localhost:9040/user/protected?name=ihtvmzmz&age=26",
-            { feature: ["big", "long"] },
-            {
-                headers: {
-                    authorization: TOKEN
-                }
+        .get(`http://localhost:9040/user/users/${id}`, {
+            headers: {
+                authorization: TOKEN
             }
-        )
+        })
+        .then((v) => {
+            console.info(v.data);
+        });
+};
+
+const visitUpdateUser = (id) => {
+    axios
+        .put(`http://localhost:9040/user/users/${id}`, { name: "杨多多", username: "yhdodo", password: 123, telephone: "15239177793", role: 1, desc: "不错不错"}, {
+            headers: {
+                authorization: TOKEN
+            }
+        })
         .then((v) => {
             console.info(v.data);
         });
@@ -49,5 +58,7 @@ const visitProtected = () => {
 login();
 
 setTimeout(() => {
-    visitProtected();
-}, 31 * 1000);
+    // visitGetUser(23);
+    visitUpdateUser(33);
+}, 1000);
+

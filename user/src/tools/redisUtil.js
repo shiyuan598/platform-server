@@ -8,13 +8,14 @@ const redis = new Redis(config.REDIS);
 async function setValue(key, value, expireSeconds = 24 * 60 * 60) {
   try {
     if (expireSeconds) {
-      await redis.setex(prefix + key, expireSeconds, JSON.stringify(value));
+      return await redis.setex(prefix + key, expireSeconds, JSON.stringify(value));
     } else {
-      await redis.set(prefix + key, JSON.stringify(value));
+      return await redis.set(prefix + key, JSON.stringify(value));
     }
   } catch (error) {
     // 这里可以根据需要进行异常处理
     console.error('Error while setting value in Redis:', error.message);
+    throw error;
   }
 }
 
@@ -26,7 +27,18 @@ async function getValue(key) {
   } catch (error) {
     // 这里可以根据需要进行异常处理
     console.error('Error while getting value from Redis:', error.message);
-    return null;
+    throw error;
+  }
+}
+
+// 从Redis中删除指定的键
+async function deleteKey(key) {
+  try {
+    await redis.del(prefix + key);
+  } catch (error) {
+    // 这里可以根据需要进行异常处理
+    console.error('Error while deleting key from Redis:', error.message);
+    throw error;
   }
 }
 
@@ -34,4 +46,5 @@ async function getValue(key) {
 module.exports = {
   setValue,
   getValue,
+  deleteKey
 };

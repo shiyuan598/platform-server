@@ -11,4 +11,4 @@ async function exampleUsage() {
     console.log(userinfo);
 }
 
-exampleUsage();
+// exampleUsage();
