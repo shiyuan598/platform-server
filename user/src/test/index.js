@@ -16,7 +16,6 @@ async function login() {
 
         const { code, data } = response.data;
         if (code !== 1) {
-            console.info("data:", data);
             const token = data.token;
             if (token) {
                 TOKEN = token;
@@ -28,7 +27,7 @@ async function login() {
     }
 }
 
-const visitGetUser = (id) => {
+const getUserById = (id) => {
     axios
         .get(`${baseUrl}/user/users/${id}`, {
             headers: {
@@ -40,9 +39,9 @@ const visitGetUser = (id) => {
         });
 };
 
-const visitGetUsers = () => {
+const getUsers = () => {
     axios
-        .get(`${baseUrl}/user/users`, {
+        .get(`${baseUrl}/user/users?pageNo=1&pageSize=4&keyword=y&orderField=id&orderSeq=ASC`, {
             headers: {
                 authorization: TOKEN
             }
@@ -52,7 +51,19 @@ const visitGetUsers = () => {
         });
 };
 
-const visitUpdateUser = (id) => {
+const getAllUsers = () => {
+    axios
+        .get(`${baseUrl}/user/all`, {
+            headers: {
+                authorization: TOKEN
+            }
+        })
+        .then((v) => {
+            console.info(v.data);
+        });
+};
+
+const updateUser = (id) => {
     axios
         .put(
             `${baseUrl}/user/users/${id}`,
@@ -68,9 +79,22 @@ const visitUpdateUser = (id) => {
         });
 };
 
+const deleteUserById = (id) => {
+    axios
+        .delete(`${baseUrl}/user/users/${id}`, {
+            headers: {
+                authorization: TOKEN
+            }
+        })
+        .then((v) => {
+            console.info(v.data);
+        });
+};
+
 login();
 
-setTimeout(() => {
-    visitGetUsers();
+setTimeout(async () => {
+    await deleteUserById(53);
+    getAllUsers();
     // visitUpdateUser(33);
 }, 1000);

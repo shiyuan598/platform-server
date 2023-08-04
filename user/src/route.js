@@ -19,7 +19,6 @@ const generateToken = (info) => {
 
 const verifyToken = (request, response, next) => {
     const token = request.headers.authorization;
-    console.info("token", token);
 
     if (!token) {
         return response.status(401).json({ message: "Unauthorized" });
@@ -160,40 +159,6 @@ router.get("/users", verifyToken, (request, response) => {
     }
 });
 
-// 查询全部用户并使用缓存
-router.get("/users/all", verifyToken, async (request, response) => {
-    try {
-        // 尝试从 Redis 缓存中获取用户列表数据
-        let userList = await redisTool.getValue(CACHE_KEY);
-
-        if (!userList) {
-            // 如果缓存中没有数据，则从数据库中查询数据
-            const sql = `
-                SELECT id, name, username, telephone, \`role\`,
-                CASE \`role\`
-                    WHEN 0 THEN '管理员'
-                    WHEN 1 THEN '普通用户'
-                    WHEN 2 THEN 'B系统管理员'
-                    ELSE '未知角色'
-                END AS rolename,
-                \`desc\`
-                FROM user`;
-
-            const query = sqlUtil.execute(sql);
-            userList = await query;
-
-            // 将查询结果存入 Redis 缓存
-            redisTool.setValue(CACHE_KEY, userList);
-        }
-
-        // 返回查询结果
-        fullFilled(response, userList);
-    } catch (error) {
-        console.info("error in create users:", error);
-        errorHandler(response, error);
-    }
-});
-
 // 修改用户
 router.put("/users/:id", verifyToken, async (request, response) => {
     try {
@@ -224,6 +189,40 @@ router.delete("/users/:id", verifyToken, async (request, response) => {
         fullFilled(response, value);
     } catch (error) {
         console.error("Error in deleting user:", error);
+        errorHandler(response, error);
+    }
+});
+
+// 查询全部用户并使用缓存
+router.get("/all", verifyToken, async (request, response) => {
+    try {
+        // 尝试从 Redis 缓存中获取用户列表数据
+        let userList = await redisTool.getValue(CACHE_KEY);
+        console.info("userList:", userList);
+        if (!userList) {
+            // 如果缓存中没有数据，则从数据库中查询数据
+            const sql = `
+                SELECT id, name, username, telephone, \`role\`,
+                CASE \`role\`
+                    WHEN 0 THEN '管理员'
+                    WHEN 1 THEN '普通用户'
+                    WHEN 2 THEN 'B系统管理员'
+                    ELSE '未知角色'
+                END AS rolename,
+                \`desc\`
+                FROM user`;
+
+            const query = sqlUtil.execute(sql);
+            userList = await query;
+
+            // 将查询结果存入 Redis 缓存
+            redisTool.setValue(CACHE_KEY, userList);
+        }
+
+        // 返回查询结果
+        fullFilled(response, userList);
+    } catch (error) {
+        console.info("error in create users:", error);
         errorHandler(response, error);
     }
 });
