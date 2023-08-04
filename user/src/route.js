@@ -7,10 +7,10 @@ const CACHE_KEY = "users";
 
 const router = express.Router();
 
-const generateToken = (user) => {
+const generateToken = (info) => {
     try {
         // 生成Token，默认使用 HMAC SHA-256
-        const token = jwt.sign(user, SECRET_KEY, { expiresIn: "8h" });
+        const token = jwt.sign(info, SECRET_KEY, { expiresIn: "8h" });
         return token;
     } catch (error) {
         throw error;
@@ -69,7 +69,7 @@ router.post("/login", async (request, response) => {
         if (!user || !user.length) {
             fullFilled(response, { msg: "用户名或密码错误" }, undefined, 1);
         } else {
-            fullFilled(response, { token: generateToken(user[0]) });
+            fullFilled(response, { token: generateToken({id: user[0].id}), userInfo: user[0] });
         }
     } catch (error) {
         console.info("error in login:", error);
@@ -98,7 +98,7 @@ router.post("/users", verifyToken, async (request, response) => {
 router.get("/users/:id", verifyToken, (request, response) => {
     try {
         const { id } = request.params;
-        const sql = "SELECT name, username, telephone, `role`, `desc` FROM user WHERE id = ?";
+        const sql = "SELECT id, name, username, telephone, `role`, `desc` FROM user WHERE id = ?";
         const query = sqlUtil.execute(sql, [id]);
         query.then(
             (value) => fullFilled(response, value),
@@ -116,7 +116,7 @@ router.get("/users", verifyToken, (request, response) => {
         const { pageSize, pageNo, keyword, orderField, orderSeq } = request.query;
 
         let sql = `
-            SELECT name, username, telephone, \`role\`,
+            SELECT id, name, username, telephone, \`role\`,
             CASE \`role\`
                 WHEN 0 THEN '管理员'
                 WHEN 1 THEN '普通用户'
@@ -169,7 +169,7 @@ router.get("/users/all", verifyToken, async (request, response) => {
         if (!userList) {
             // 如果缓存中没有数据，则从数据库中查询数据
             const sql = `
-                SELECT name, username, telephone, \`role\`,
+                SELECT id, name, username, telephone, \`role\`,
                 CASE \`role\`
                     WHEN 0 THEN '管理员'
                     WHEN 1 THEN '普通用户'
