@@ -19,7 +19,7 @@ async function login() {
             const token = data.token;
             if (token) {
                 TOKEN = token;
-                console.info("TOKEN:", TOKEN);
+                // console.info("TOKEN:", TOKEN);
             }
         }
     } catch (error) {
@@ -64,6 +64,24 @@ const getAllUsers = () => {
         });
 };
 
+const createUser = () => {
+    axios
+        .post(
+            `${baseUrl}/user/users`,
+            { name: "杨沉沉", username: "yhifif", password: 123, telephone: "15239177793", desc: "不错不错" },
+            {
+                headers: {
+                    authorization: TOKEN
+                }
+            }
+        )
+        .then((v) => {
+            console.info(v.data);
+        }).catch(v => {
+            console.info("\n\n", v.response.data.message, "\n\n");
+        });
+};
+
 const updateUser = (id) => {
     axios
         .put(
@@ -95,7 +113,9 @@ const deleteUserById = (id) => {
 login();
 
 setTimeout(async () => {
-    getUserById(2);
+    await getUserById(2);
+
+    createUser();
     // await deleteUserById(53);
     // getAllUsers();
     // visitUpdateUser(33);

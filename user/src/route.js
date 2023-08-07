@@ -3,7 +3,8 @@ const jwt = require("jsonwebtoken");
 const sqlUtil = require("./tools/sqlUtil");
 const redisTool = require("./tools/redisUtil");
 const { SECRET_KEY } = require("../config");
-const CACHE_KEY = "users";
+const CACHE_KEY = "users"; // 放入redis中的key
+const APP_KEY = "user"; // 标识当前应用的key
 
 const router = express.Router();
 
@@ -34,13 +35,19 @@ const verifyToken = (request, response, next) => {
     });
 };
 
+const authorized = (userInfo) => {
+    console.info("userInfo:", userInfo);
+    const role = userInfo.roles[APP_KEY];
+    return role === "super" || role === "admin";
+}
+
 // 响应处理
-const fullFilled = (response, data, pagination, code = 0) => {
-    response.json({
+const fullFilled = (response, data, pagination, code = 0, status=200) => {
+    response.status(status).json({
         code,
         data,
         pagination,
-        msg: "成功"
+        message: "成功"
     });
 };
 
@@ -49,7 +56,7 @@ const errorHandler = (response, err) => {
     response &&
         response.status(500).json({
             code: 1,
-            msg: err.toString()
+            message: err.toString()
         });
 };
 
@@ -61,14 +68,14 @@ router.post("/login", async (request, response) => {
         const sql = `SELECT id, name, username FROM user WHERE username = ? AND password = ?`;
         const user = await sqlUtil.execute(sql, [username, password]);
         if (!user || !user.length) {
-            fullFilled(response, { msg: "用户名或密码错误" }, undefined, 1);
+            fullFilled(response, { message: "用户名或密码错误" }, undefined, 1);
         } else {
             const { id, username } = user[0];
             const sql = `SELECT role.code as role, app.code as app FROM user_role
-            LEFT JOIN user ON user.id = user_role.user_id
-            LEFT JOIN app ON app.id = user_role.app_id
-            LEFT JOIN role ON role.id = user_role.role_id
-            WHERE user.id = ?`;
+                LEFT JOIN user ON user.id = user_role.user_id
+                LEFT JOIN app ON app.id = user_role.app_id
+                LEFT JOIN role ON role.id = user_role.role_id
+                WHERE user.id = ?`;
             const userRole = await sqlUtil.execute(sql, [id]);
             const roles = {};
             userRole.forEach((item) => (roles[item.app] = item.role));
@@ -83,9 +90,14 @@ router.post("/login", async (request, response) => {
 // 新增用户
 router.post("/users", verifyToken, async (request, response) => {
     try {
+        // 判断权限
+        if (!authorized(request.userInfo)) {
+            response.status(403).json({message: "权限不足"});
+            return;
+        }
         const { name, username, password, telephone, desc } = request.body;
         const sql =
-            "INSERT INTO user(name, username, password, telephone, token, `desc`) VALUES(?, ?, ?, ?, ?, ?, ?)";
+            "INSERT INTO user(name, username, password, telephone, `desc`) VALUES(?, ?, ?, ?, ?)";
         const params = [name, username, password, telephone, desc];
         const value = await sqlUtil.execute(sql, params);
         // 成功后，直接删除 Redis 缓存中的数据，下次查询时会重新获取最新数据
@@ -100,7 +112,6 @@ router.post("/users", verifyToken, async (request, response) => {
 // 查询用户
 router.get("/users/:id", verifyToken, (request, response) => {
     try {
-        console.info(request.userInfo);
         const { id } = request.params;
         const sql = "SELECT id, name, username, telephone, `desc` FROM user WHERE id = ?";
         const query = sqlUtil.execute(sql, [id]);
@@ -109,7 +120,7 @@ router.get("/users/:id", verifyToken, (request, response) => {
             (error) => errorHandler(response, error)
         );
     } catch (error) {
-        console.info("error in create users:", error);
+        console.info("error in get user by id:", error);
         errorHandler(response, error);
     }
 });
@@ -149,7 +160,7 @@ router.get("/users", verifyToken, (request, response) => {
             (error) => errorHandler(response, error)
         );
     } catch (error) {
-        console.info("error in create users:", error);
+        console.info("error in get users:", error);
         errorHandler(response, error);
     }
 });
@@ -157,6 +168,11 @@ router.get("/users", verifyToken, (request, response) => {
 // 修改用户
 router.put("/users/:id", verifyToken, async (request, response) => {
     try {
+        // 判断权限
+        if (!authorized(request.userInfo)) {
+            response.status(403).json({message: "权限不足"});
+            return;
+        }
         const { id } = request.params;
         // Get user data from request body
         const { name, username, password, telephone, desc } = request.body;
@@ -176,6 +192,11 @@ router.put("/users/:id", verifyToken, async (request, response) => {
 // 删除用户
 router.delete("/users/:id", verifyToken, async (request, response) => {
     try {
+        // 判断权限
+        if (!authorized(request.userInfo)) {
+            response.status(403).json({message: "权限不足"});
+            return;
+        }
         const { id } = request.params;
         const sql = "DELETE FROM user WHERE id = ?";
         const value = await sqlUtil.execute(sql, [id]);
@@ -208,9 +229,134 @@ router.get("/all", verifyToken, async (request, response) => {
         // 返回查询结果
         fullFilled(response, userList);
     } catch (error) {
+        console.info("error in get all users:", error);
+        errorHandler(response, error);
+    }
+});
+
+// 查询所有role
+router.get("/roles", verifyToken, (request, response) => {
+    try {
+        let sql = `SELECT id, name, code FROM user WHERE code != "super"`;
+        // 如果没有传入pageSize和pageNo，则不分页，返回所有数据
+        const query = sqlUtil.execute(sql, []);
+        query.then(
+            (value) => fullFilled(response, value),
+            (error) => errorHandler(response, error)
+        );
+    } catch (error) {
+        console.info("error in get roles:", error);
+        errorHandler(response, error);
+    }
+});
+
+// 查询所有app
+router.get("/apps", verifyToken, (request, response) => {
+    try {
+        let sql = `SELECT id, name, code FROM app WHERE 1=1`;
+        // 如果没有传入pageSize和pageNo，则不分页，返回所有数据
+        const query = sqlUtil.execute(sql, []);
+        query.then(
+            (value) => fullFilled(response, value),
+            (error) => errorHandler(response, error)
+        );
+    } catch (error) {
+        console.info("error in get apps:", error);
+        errorHandler(response, error);
+    }
+});
+
+// 查询用户
+router.get("/authorities/:id", verifyToken, (request, response) => {
+    try {
+        const { id } = request.params;
+        const sql = `SELECT role.code as role, app.code as app FROM user_role
+            LEFT JOIN user ON user.id = user_role.user_id
+            LEFT JOIN app ON app.id = user_role.app_id
+            LEFT JOIN role ON role.id = user_role.role_id
+            WHERE user.id = ?`;
+        const query = sqlUtil.execute(sql, [id]);
+        query.then(
+            (value) => fullFilled(response, value),
+            (error) => errorHandler(response, error)
+        );
+    } catch (error) {
         console.info("error in create users:", error);
         errorHandler(response, error);
     }
 });
+
+// 给用户授权
+router.post("/grant", verifyToken, async (request, response) => {
+    try {
+        // 判断权限
+        if (!authorized(request.userInfo)) {
+            response.status(403).json({message: "权限不足"});
+            return;
+        }
+        const { roleId, userId, appId } = request.body;
+        
+        // 先检查数据库中是否已经存在记录
+        const checkSql = "SELECT * FROM user_role WHERE user_id = ? AND app_id = ?";
+        const checkParams = [userId, appId];
+        const existingRecord = await sqlUtil.queryOne(checkSql, checkParams);
+
+        if (existingRecord) {
+            // 如果记录已存在，执行更新操作
+            const updateSql = "UPDATE user_role SET role_id = ? WHERE user_id = ? AND app_id = ?";
+            const updateParams = [roleId, userId, appId];
+            const updateResult = await sqlUtil.execute(updateSql, updateParams);
+            fullFilled(response, updateResult);
+        } else {
+            // 如果记录不存在，执行插入操作
+            const insertSql = "INSERT INTO user_role (user_id, role_id, app_id) VALUES (?, ?, ?)";
+            const insertParams = [userId, roleId, appId];
+            const insertResult = await sqlUtil.execute(insertSql, insertParams);
+            fullFilled(response, insertResult);
+        }
+    } catch (error) {
+        console.error("Error in updating user:", error);
+        errorHandler(response, error);
+    }
+});
+
+// 给用户授权多个记录
+router.post("/grantMultiple", verifyToken, async (request, response) => {
+    try {
+        // 判断权限
+        if (!authorized(request.userInfo)) {
+            response.status(403).json({message: "权限不足"});
+            return;
+        }
+        const authItems = request.body; // 数组，每个元素是一个授权项对象
+
+        for (const authItem of authItems) {
+            const { userId, appId, roleId } = authItem;
+
+            // 先检查数据库中是否已经存在记录
+            const checkSql = "SELECT * FROM user_role WHERE user_id = ? AND app_id = ?";
+            const checkParams = [userId, appId];
+            const existingRecord = await sqlUtil.execute(checkSql, checkParams);
+
+            if (existingRecord) {
+                // 如果记录已存在，执行更新操作
+                const updateSql = "UPDATE user_role SET role_id = ? WHERE user_id = ? AND app_id = ?";
+                const updateParams = [roleId, userId, appId];
+                await sqlUtil.execute(updateSql, updateParams);
+            } else {
+                // 如果记录不存在，执行插入操作
+                const insertSql = "INSERT INTO user_role (user_id, role_id, app_id) VALUES (?, ?, ?)";
+                const insertParams = [userId, roleId, appId];
+                await sqlUtil.execute(insertSql, insertParams);
+            }
+        }
+
+        fullFilled(response, "Multiple authorizations completed.");
+    } catch (error) {
+        console.error("Error in updating user:", error);
+        errorHandler(response, error);
+    }
+});
+
 
 module.exports = router;
