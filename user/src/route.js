@@ -28,8 +28,8 @@ const verifyToken = (request, response, next) => {
         if (err) {
             return response.status(401).json({ message: "Invalid token" });
         }
-
-        request.user = decoded;
+        // 将token中的用户信息解析出来挂在request上
+        request.userInfo = decoded;
         next();
     });
 };
@@ -54,21 +54,25 @@ const errorHandler = (response, err) => {
 };
 
 // 处理特定路径的路由
-router.get("/", (req, res) => {
-    res.send("测试 " + Date.now());
-});
-
-// 处理特定路径的路由
 router.post("/login", async (request, response) => {
     try {
         const { username, password } = request.body;
 
-        const sql = `SELECT id, name, username, role FROM user WHERE username = ? AND password = ?`;
+        const sql = `SELECT id, name, username FROM user WHERE username = ? AND password = ?`;
         const user = await sqlUtil.execute(sql, [username, password]);
         if (!user || !user.length) {
             fullFilled(response, { msg: "用户名或密码错误" }, undefined, 1);
         } else {
-            fullFilled(response, { token: generateToken({id: user[0].id}), userInfo: user[0] });
+            const { id, username } = user[0];
+            const sql = `SELECT role.code as role, app.code as app FROM user_role
+            LEFT JOIN user ON user.id = user_role.user_id
+            LEFT JOIN app ON app.id = user_role.app_id
+            LEFT JOIN role ON role.id = user_role.role_id
+            WHERE user.id = ?`;
+            const userRole = await sqlUtil.execute(sql, [id]);
+            const roles = {};
+            userRole.forEach((item) => (roles[item.app] = item.role));
+            fullFilled(response, { token: generateToken({ id, username, roles }), userInfo: { ...user[0], roles } });
         }
     } catch (error) {
         console.info("error in login:", error);
@@ -79,10 +83,10 @@ router.post("/login", async (request, response) => {
 // 新增用户
 router.post("/users", verifyToken, async (request, response) => {
     try {
-        const { name, username, password, telephone, role, desc } = request.body;
+        const { name, username, password, telephone, desc } = request.body;
         const sql =
-            "INSERT INTO user(name, username, password, telephone, `role`, token, `desc`) VALUES(?, ?, ?, ?, ?, ?, ?)";
-        const params = [name, username, password, telephone, role, desc];
+            "INSERT INTO user(name, username, password, telephone, token, `desc`) VALUES(?, ?, ?, ?, ?, ?, ?)";
+        const params = [name, username, password, telephone, desc];
         const value = await sqlUtil.execute(sql, params);
         // 成功后，直接删除 Redis 缓存中的数据，下次查询时会重新获取最新数据
         await redisTool.deleteKey(CACHE_KEY);
@@ -96,8 +100,9 @@ router.post("/users", verifyToken, async (request, response) => {
 // 查询用户
 router.get("/users/:id", verifyToken, (request, response) => {
     try {
+        console.info(request.userInfo);
         const { id } = request.params;
-        const sql = "SELECT id, name, username, telephone, `role`, `desc` FROM user WHERE id = ?";
+        const sql = "SELECT id, name, username, telephone, `desc` FROM user WHERE id = ?";
         const query = sqlUtil.execute(sql, [id]);
         query.then(
             (value) => fullFilled(response, value),
@@ -114,17 +119,7 @@ router.get("/users", verifyToken, (request, response) => {
     try {
         const { pageSize, pageNo, keyword, orderField, orderSeq } = request.query;
 
-        let sql = `
-            SELECT id, name, username, telephone, \`role\`,
-            CASE \`role\`
-                WHEN 0 THEN '管理员'
-                WHEN 1 THEN '普通用户'
-                WHEN 2 THEN 'B系统管理员'
-                ELSE '未知角色'
-            END AS rolename,
-            \`desc\`
-            FROM user
-            WHERE 1=1`;
+        let sql = `SELECT id, name, username, telephone, \`desc\` FROM user WHERE 1=1`;
 
         // 拼接关键字模糊匹配条件
         if (keyword) {
@@ -164,10 +159,10 @@ router.put("/users/:id", verifyToken, async (request, response) => {
     try {
         const { id } = request.params;
         // Get user data from request body
-        const { name, username, password, telephone, role, desc } = request.body;
+        const { name, username, password, telephone, desc } = request.body;
         const sql =
-            "UPDATE user SET name = ?, username = ?, password = ?, telephone = ?, role = ?, `desc` = ? WHERE id = ?";
-        const params = [name, username, password, telephone, role, desc, id];
+            "UPDATE user SET name = ?, username = ?, password = ?, telephone = ?, `desc` = ? WHERE id = ?";
+        const params = [name, username, password, telephone, desc, id];
         const value = await sqlUtil.execute(sql, params);
         // 成功后，直接删除 Redis 缓存中的数据，下次查询时会重新获取最新数据
         await redisTool.deleteKey(CACHE_KEY);
@@ -201,16 +196,7 @@ router.get("/all", verifyToken, async (request, response) => {
         console.info("userList:", userList);
         if (!userList) {
             // 如果缓存中没有数据，则从数据库中查询数据
-            const sql = `
-                SELECT id, name, username, telephone, \`role\`,
-                CASE \`role\`
-                    WHEN 0 THEN '管理员'
-                    WHEN 1 THEN '普通用户'
-                    WHEN 2 THEN 'B系统管理员'
-                    ELSE '未知角色'
-                END AS rolename,
-                \`desc\`
-                FROM user`;
+            const sql = `SELECT id, name, username, telephone, \`desc\` FROM user`;
 
             const query = sqlUtil.execute(sql);
             userList = await query;

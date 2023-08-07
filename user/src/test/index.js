@@ -10,7 +10,7 @@ let TOKEN = null;
 async function login() {
     try {
         const response = await axios.post(`${baseUrl}/user/login`, {
-            username: "root",
+            username: "wangshiyuan",
             password: "123"
         });
 
@@ -19,6 +19,7 @@ async function login() {
             const token = data.token;
             if (token) {
                 TOKEN = token;
+                console.info("TOKEN:", TOKEN);
             }
         }
     } catch (error) {
@@ -94,7 +95,8 @@ const deleteUserById = (id) => {
 login();
 
 setTimeout(async () => {
-    await deleteUserById(53);
-    getAllUsers();
+    getUserById(2);
+    // await deleteUserById(53);
+    // getAllUsers();
     // visitUpdateUser(33);
 }, 1000);
