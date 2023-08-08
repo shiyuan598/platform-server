@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Flask-SocketIO Example</title>
+        <!-- <script src="//code.jquery.com/jquery-1.12.4.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.2.0/socket.io.js"></script> -->
+    </head>
+    <body>
+        <h4>Flask-SocketIO Example</h4>
+        <div id="log"></div>
+        <input type="text" id="message-input" />
+        <button id="send">发送</button>
+        <p></p>
+        <button id="btnTest">测试</button>
+        <button id="btnFile">文件</button>
+        <button id="btnDownload">下载</button>
+        <script>
+            const socket = new WebSocket("ws://localhost:9011/socket.io");
+
+            // 连接成功时触发
+            socket.onopen = () => {
+                console.log("WebSocket连接已建立");
+                socket.send("Hi, server");
+            };
+
+            // 接收消息时触发
+            socket.onmessage = (event) => {
+                const message = event.data;
+                console.log("收到消息:", message);
+            };
+
+            // 连接关闭时触发
+            socket.onclose = () => {
+                console.log("WebSocket连接已关闭");
+            };
+
+            const send = document.getElementById("send");
+            send.onclick = () => {
+                const text = document.getElementById("message-input").value;
+
+                socket.send(
+                    JSON.stringify({
+                        type: "Task",
+                        message: {
+                            carName: "J7A01",
+                            creator: 1,
+                            package_on_artifacts: "",
+                            package_on_vehicle: "HWL4_X86-20230608-110818-v1.0.28.tar.gz",
+                            cur_package: "HWL4_X86-20230609-155310-v1.0.31.tar.gz"
+                        }
+                    })
+                );
+
+            };
+
+            const btnTest = document.getElementById("btnTest");
+            btnTest.onclick = () => {
+                let url =
+                    "http://localhost:9012/deploy/package/json?project=HWL4_X86&package=HWL4_X86-20230607-153750-v1.0.27.tar.gz";
+                url = "http://localhost:9012/deploy/projects";
+                // url = "http://localhost:9012/deploy/packages?artifacts_url=/HWL4_X86/cicd";
+                // url = "http://localhost:9012/deploy/vehicle/info?vehicle=J7A01"
+                // url = "http://localhost:9012/deploy/group/list?orderField=id&orderSeq=descend&pageSize=3&pageNo=1";
+                // url = "http://localhost:9012/deploy/task/list?orderField=id&orderSeq=descend&pageSize=10&pageNo=1";
+                // url = "http://localhost:9012/deploy/task/delete";
+                // url = "http://localhost:9012/deploy/extract";
+                // url = "http://localhost:9012/deploy/downloadPackage";
+                fetch(url, {
+                    timeout: 5 * 1000
+                })
+                    .then((v) => v.json())
+                    .then(console.info);
+            };
+
+            const btnFile = document.getElementById("btnFile");
+            btnFile.onclick = () => {
+                const url = "http://172.16.12.84:9011/monitor/status/update";
+                fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        project: 1,
+                        project_artifacts: "HWL4_X86/cicd",
+                        creator: 1,
+                        vehicles: "J7A01"
+                    }),
+                    timeout: 1000
+                }).then(console.info);
+            };
+
+
+            const btnDownload = document.getElementById("btnDownload");
+            btnDownload.onclick = () => {
+                const url = "http://localhost:9012/deploy/downloadPackage";
+                fetch(url, {
+                    timeout: 5 * 1000
+                }).then(console.info);
+            };
+        </script>
+    </body>
+</html>

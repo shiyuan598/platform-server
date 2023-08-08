@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="stylesheet" href="style.css" />
+        <title></title>
+        <script src="./flv.js"></script>
+        <script src="./config.js"></script>
+    </head>
+    <body>
+        <ul id="channel-container" class="container"></ul>
+        <video id="videoElement" controls="controls" muted="muted"></video>
+        <script>
+            var flvPlayer = null;
+            function createPlayer(channel) {
+                destroyPlayer();
+                if (flvjs.isSupported()) {
+                    var videoElement = document.getElementById("videoElement");
+                    flvPlayer = flvjs.createPlayer(
+                        {
+                            type: "flv",
+                            isLive: true,
+                            hasAudio: false,
+                            url: `http://123.60.179.96:1936/live/${channel}.flv`
+                        },
+                        {
+                            // enableWorker: true, // 启用分离线程进行转换（目前不稳定）
+
+                            enableStashBuffer: false, // 启用IO存储缓冲区。如果需要实时（最小延迟）播放实时流，请设置为false，但如果出现网络抖动，则可能会暂停播放。
+
+                            // stashInitialSize: 384, // 指示IO存储缓冲区的初始大小。默认值为384KB。指出合适的大小可以提高视频加载/寻道时间
+                            // isLive: false, // 与MediaDataSource中的isLive相同，如果在MediaDataSource结构中设置了isLive，则忽略它。
+                            // lazyLoad: true, // 如果有足够的数据用于播放，请中止http连接。
+                            // lazyLoadMaxDuration: 3 * 60, // 指示为lazyLoad保留的数据秒数
+                            // lazyLoadRecoverDuration: 30, // 以秒为单位指示lazyLoad恢复时间边界。
+                            // deferLoadAfterSourceOpen: true, // MediaSource sourceopen事件触发后进行加载。在Chrome上，在后台打开的选项卡在切换到该选项卡之前可能不会触发sourceopen事件。
+                            autoCleanupSourceBuffer: true, // 对 SourceBuffer 执行自动清理
+
+                            // autoCleanupMaxBackwardDuration: 12, // 当向后缓冲区持续时间超过此值（以秒为单位）时，请对SourceBuffer执行自动清理
+                            // autoCleanupMinBackwardDuration: 8, // 指示执行自动清理时向后缓冲区保留的持续时间（秒）。
+                            fixAudioTimestampGap: true, // 在检测到较大的音频时间戳间隙时，填充静音音频帧以避免a/v不同步。
+                            // accurateSeek: false, // 精确搜索任何帧，不限于视频IDR帧，但速度可能稍慢。可在Chrome>50、FireFox和Safari上使用。
+                            // seekType: "range", // “range”使用范围请求进行搜索，或“param”将参数添加到url中以指示请求范围。
+                            // seekParamStart: "bstart", // 指示seekType='param'的seek开始参数名称
+                            // seekParamEnd: "bend", // 指示seekType='param'的seek end参数名称
+                            // rangeLoadZeroStart: false, // 发送 `Range: bytes=0-` 如果使用范围搜索，则首次加载
+                            // customSeekHandler: undefined, // 指示自定义搜索处理程序
+                            reuseRedirectedURL: true // 重新使用 301/302 重定向的url进行子序列请求，如查找、重新连接等。
+
+                            // referrerPolicy: "no-referrer-when-downgrade", // 指示使用FetchStreamLoader时的引用者策略
+                            // headers: undefined // 指示将添加到请求中的其他标头
+                        }
+                    );
+                    flvPlayer.attachMediaElement(videoElement);
+                    flvPlayer.load();
+                    setTimeout(() => {
+                        flvPlayer.play();
+                    }, 200);
+                }
+            }
+
+            function destroyPlayer() {
+                if (flvPlayer) {
+                    flvPlayer.pause();
+                    flvPlayer.unload();
+                    flvPlayer.detachMediaElement();
+                    flvPlayer.destroy();
+                    flvPlayer = null;
+                }
+            }
+            
+
+            function setActiveChannel(channel) {
+                let match = document.getElementsByClassName("active")[0];
+                match.className = "normal";
+
+                match = document.getElementById(channel);
+                match.className = "active";
+            }
+
+            function initChannelBtn(channels) {
+                let container = document.getElementById("channel-container");
+                channels.forEach((channel) => {
+                    let li = document.createElement("li");
+                    li.id = channel;
+                    li.className = channel === current ? "active" : "normal";
+                    li.onclick = () => {
+                        if (channel !== current) {
+                            setActiveChannel(channel);
+                            createPlayer(channel);
+                            current = channel;
+                        }
+                    };
+                    li.innerHTML = `<span>通道${channel}</span>`;
+                    container.appendChild(li);
+                });
+            }
+
+            let current = channels[0];
+            (() => {
+                initChannelBtn(channels);
+                createPlayer(current);
+            })();
+        </script>
+    </body>
+</html>

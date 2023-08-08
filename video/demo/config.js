@@ -1,0 +1,1 @@
+let channels = ["LFN98LDA5L5S10047", 101, 102];

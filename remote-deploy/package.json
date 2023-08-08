@@ -1,0 +1,43 @@
+{
+  "name": "deploy-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon",
+    "start": "node app.js",
+    "build": "ncc build app.js -m -o dist",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shiyuan598/deploy-server.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/shiyuan598/deploy-server/issues"
+  },
+  "homepage": "https://github.com/shiyuan598/deploy-server#readme",
+  "dependencies": {
+    "axios": "^1.4.0",
+    "body-parser": "^1.20.2",
+    "child_process": "^1.0.2",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.9",
+    "express": "^4.18.2",
+    "fs": "0.0.1-security",
+    "mysql2": "^3.4.2",
+    "node-cron": "^3.0.2",
+    "targz": "^1.0.1",
+    "ws": "^8.13.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.22.6",
+    "@babel/preset-env": "^7.22.6",
+    "@vercel/ncc": "^0.36.1",
+    "babel-loader": "^9.1.2",
+    "nodemon": "^2.0.22"
+  }
+}
